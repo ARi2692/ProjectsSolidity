@@ -36,8 +36,12 @@ contract PropertyProject {
 // can change the ownership of one of your properties to another address
     function changePropertyOwner(uint _index, address _addr) public {
         // the properties of only the msg.sender will be checked.
+        uint length = properties[msg.sender].length;
         properties[msg.sender][_index].owner = _addr;
         properties[_addr].push(properties[msg.sender][_index]);
-        delete properties[msg.sender][_index];
+        // delete properties[msg.sender][_index];
+        // can replace the last property with the property to be deleted and then pop()
+        properties[msg.sender][_index] = properties[msg.sender][length - 1];
+        properties[msg.sender].pop();
     }
 }
