@@ -2,10 +2,13 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-// A contract to add your property details,
-// to sell and change the ownership of your properties 
+/// @title Property Project 
+/// @author Arundhati
+/// @dev add your property details, sell it and change the ownership
+
 contract PropertyProject {
 
+    // property details 
     struct Property {
         address owner;
         string name;
@@ -13,40 +16,50 @@ contract PropertyProject {
         uint area;
     }
 
-// all the properties listed for one particular address in an array,
-// getter not required as tagged public
-    mapping(address => mapping(uint => Property)) public properties;
+    // list of all the properties 
+    Property[] public properties;
 
-// events once amount is paid
-    event paid(address, uint);
+    // address mapped to the no of properties it own.
+    mapping(address => uint) ownerPropertyCount;
 
-// add your property details using this function
+    /** 
+    * @dev Only the owner could add his property using this function
+    * @param _name, the value of the property and the area of the property
+    */
     function addProperties(
-        uint _id,
         string calldata _name,
         uint _value,
         uint _area
     ) public {
-        properties[msg.sender][_id].owner = msg.sender;
-        properties[msg.sender][_id].name = _name;
-        properties[msg.sender][_id].value = _value;
-        properties[msg.sender][_id].area = _area;
+        properties.push(Property( msg.sender, _name, _value, _area ));
+        ownerPropertyCount[msg.sender]++;
     }
 
-// can change the ownership of one of your properties to another after the amount has been paid
+    /** 
+    * @dev list of all properties owned by a particular owner
+    * @param _owner The owner address
+    * @return List of all the properties of owner
+    */ 
+    function getPropertyByOwner(address _owner) external view returns(uint[] memory) {
+        uint[] memory result = new uint[](ownerPropertyCount[_owner]);
+        uint counter = 0;
+        for(uint i = 0; i < properties.length; i++) {
+            if(properties[i].owner == _owner) {
+                result[counter] = i;
+                counter++;
+            }
+        }
+        return result;
+    }
+
+    /**
+    * @dev to change the owner of a property 
+    * @param _id The property ID and _addrtotransfer The address of the new owner
+    */
     function changePropertyOwner(uint _id, address _addrtotransfer) public {
-        Property memory propertyTransferred = properties[msg.sender][_id];
-        require(propertyTransferred.owner == msg.sender, "not owner!");
-        propertyTransferred.owner = _addrtotransfer;
-        properties[_addrtotransfer][_id] = propertyTransferred;
-        delete properties[msg.sender][_id];
-    }
-
-// pay the amount to the owner address by checking the value of the property
-    function BuyProperty(address payable _ownerAddr, uint _id) public payable  {
-        uint _amountToBePaid = properties[_ownerAddr][_id].value;
-        require(msg.value == _amountToBePaid, "please pay according to the value of the property");
-        _ownerAddr.transfer(msg.value);
-        emit paid(_ownerAddr, msg.value);
+        require(properties[_id].owner == msg.sender, "Not an owner");
+        properties[_id].owner = _addrtotransfer;
+        ownerPropertyCount[_addrtotransfer]++;
+        ownerPropertyCount[msg.sender]--;
     }
 }
