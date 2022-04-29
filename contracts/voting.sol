@@ -26,8 +26,8 @@ contract Voting {
     event End(string winner, uint withVotes);
 
     uint public endAt;
-    bool public started;
-    bool public ended;
+    bool internal started;
+    bool internal ended;
 
     constructor() {
         chairman = msg.sender;
