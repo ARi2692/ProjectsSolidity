@@ -49,6 +49,10 @@ contract collegeTracker {
     // Custom error when a particular address is not the authorized person to access.
     error notAdmin(address);
 
+    // Custom error when a particular college is already blocked or unblocked and trying to block agin. 
+    // Notifies the address which tries to again block or unblock college.
+    error alreadyBlockedOrUnblocked(address);
+
     // Set the University Admin as the owner, who can add colleges to the list
     constructor(address _add) {
         owner = _add;
@@ -65,9 +69,17 @@ contract collegeTracker {
     }
 
     // allowed Modifier is used to check if - a particular college is allowed to add the students
-    modifier allowed(address _add, bool _allow) {
-        if(colleges[collegeList[_add] - 1].allowedToAdd != _allow) {
+    modifier allowed(address _add) {
+        if(!colleges[collegeList[_add] - 1].allowedToAdd) {
             revert notAllowedToAddStudents(msg.sender);
+        }
+        _;
+    }
+
+    // blockedOrUnblocked Modifier is used to check if - a particular college is already blocked or unblocked
+    modifier blockedOrUnblocked(address _add, bool _allow) {
+        if(colleges[collegeList[_add] - 1].allowedToAdd == _allow) {
+            revert alreadyBlockedOrUnblocked(msg.sender);
         }
         _;
     }
@@ -103,7 +115,7 @@ contract collegeTracker {
     /// @notice allows the college admin to add a new student to the students list
     /// @dev will check if the college is allowed to add students and add the details of the student
     /// @param _add - College address of the student, _sName - student Name, _phoneNo - Phone number of student, _courseName - course Name of student.
-    function addNewStudentToCollege(address _add, string calldata _sName, uint256 _phoneNo, string calldata _courseName) external onlyAdmin(colleges[collegeList[_add] - 1].cAdmin) allowed(_add, true) {
+    function addNewStudentToCollege(address _add, string calldata _sName, uint256 _phoneNo, string calldata _courseName) external onlyAdmin(colleges[collegeList[_add] - 1].cAdmin) allowed(_add) {
         students.push(student({
             sName: _sName,
             phoneNo: _phoneNo,
@@ -114,17 +126,17 @@ contract collegeTracker {
     }
 
     /// @notice Block the college from adding new students, can only be called by the University Admin 
-    /// @dev The index of college (collegeList[_add] - 1]) will be checked in the colleges array. allowed modifier - checks if it is unblocked.
+    /// @dev The index of college (collegeList[_add] - 1]) will be checked in the colleges array. blockedOrUnblocked modifier - checks if it is unblocked.
     /// @param _add - Address of the college to block from adding students.
-    function blockCollegeToAddNewStudents(address _add) onlyAdmin(owner) external allowed(_add, true) {        
+    function blockCollegeToAddNewStudents(address _add) onlyAdmin(owner) external blockedOrUnblocked(_add, false) {        
         colleges[collegeList[_add] - 1].allowedToAdd = false;
         emit blocked(_add);
     }
 
     /// @notice Unblock the college from adding new students, can only be called by the University Admin 
-    /// @dev The index of college (collegeList[_add] - 1]) will be checked in the colleges array. allowed modifier - checks if it is blocked.
+    /// @dev The index of college (collegeList[_add] - 1]) will be checked in the colleges array. blockedOrUnblocked modifier - checks if it is blocked.
     /// @param _add - Address of the college to unblock from adding students.
-    function unblockCollegeToAddNewStudents(address _add) onlyAdmin(owner) external allowed(_add, false) {        
+    function unblockCollegeToAddNewStudents(address _add) onlyAdmin(owner) external blockedOrUnblocked(_add, true) {        
         colleges[collegeList[_add] - 1].allowedToAdd = true;
         emit unblocked(_add);
     }
