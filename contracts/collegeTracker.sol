@@ -23,7 +23,7 @@ contract collegeTracker {
 
     // college details
     struct college {
-        string collegeName; 
+        string collegeName;
         address add;
         address cAdmin;
         string regNo;
@@ -49,7 +49,7 @@ contract collegeTracker {
     // Custom error when a particular address is not the authorized person to access.
     error notAdmin(address);
 
-    // Custom error when a particular college is already blocked or unblocked and trying to block agin. 
+    // Custom error when a particular college is already blocked or unblocked and trying to block again. 
     // Notifies the address which tries to again block or unblock college.
     error alreadyBlockedOrUnblocked(address);
 
