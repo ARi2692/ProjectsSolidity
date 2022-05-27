@@ -14,6 +14,7 @@ contract PropertyProject {
         string name;
         uint value;
         uint area;
+        bool forSale;
     }
 
     // list of all the properties 
@@ -31,7 +32,7 @@ contract PropertyProject {
         uint _value,
         uint _area
     ) public {
-        properties.push(Property( msg.sender, _name, _value, _area ));
+        properties.push(Property( msg.sender, _name, _value, _area, false));
         ownerPropertyCount[msg.sender]++;
     }
 
@@ -52,14 +53,28 @@ contract PropertyProject {
         return result;
     }
 
+    function setPropertyForSale(uint _propertyID) external {
+        require(properties[_propertyID].owner == msg.sender, "Not an owner");
+        properties[_propertyID].forSale = true;
+    }
+
     /**
     * @dev to change the owner of a property 
     * @param _id The property ID and _addrtotransfer The address of the new owner
     */
-    function changePropertyOwner(uint _id, address _addrtotransfer) public {
+    function changePropertyOwner(uint _id, address _addrtotransfer, uint amount) public {
         require(properties[_id].owner == msg.sender, "Not an owner");
+        require(properties[_id].value == amount);
+        address owner = properties[_id].owner;
+        payable(owner).transfer(amount);
         properties[_id].owner = _addrtotransfer;
         ownerPropertyCount[_addrtotransfer]++;
         ownerPropertyCount[msg.sender]--;
+    } 
+
+    function buyProperty(uint _propertyID) payable external {
+        require(properties[_propertyID].forSale, "not for sale");
+        require(msg.value == properties[_propertyID].value, "value not same");      
     }
+
 }
