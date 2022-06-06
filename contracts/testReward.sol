@@ -8,6 +8,7 @@ import "./IERC20.sol";
 contract testReward {
 
     error timeNotPassed(uint createTime);
+    error NotEnoughBalance(uint amount);
 
     address immutable owner;
 
@@ -55,15 +56,19 @@ contract testReward {
         for(uint i; i < len; i++ ) {
             if (AllIds[i].amount > 0) {
                 Ids[num] = i;
-                num++; 
+                num++;
             }    
         }
     }
 
+// check if token address we can give from frontend and also owner address 
     function reward(uint _amountIn, address _to, address tokenX, address owner1) public {
         require(_amountIn > 0, "amount shoudl be more than zero");
         require(_to != address(0), "address invalid");
         uint amount = _amountIn / 200;
+        if (IERC20(tokenX).balanceOf(owner1) < amount) {
+            revert NotEnoughBalance(amount);
+        }
         _transferX(_to, amount, tokenX, owner1);
     }
 
