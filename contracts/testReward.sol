@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8;
+pragma solidity 0.6.6;
 
-import "./IERC20.sol";
-
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol"; 
 
 // An private reward function which rewards user with 0.5% of new tokens on every transaction
 contract testReward {
 
-    error timeNotPassed(uint createTime);
-    error NotEnoughBalance(uint amount);
+    // event once reward is initiated to the user address
+    event transferInitialized(address indexed _to, uint indexed timestamp, uint indexed amount);
 
     address immutable owner;
+    address owner1;
+    address tokenX;
 
     // address array in blocklist, if suspected as a bot, to be added by the owner of the contract
     mapping(address => bool) blocklist;
@@ -20,12 +21,13 @@ contract testReward {
         uint timestamp;
     }
 
-    // address -> timestamp  -> amount 
-    // mapping(address => mapping(uint => uint)) public tokenXAmount;
+    // address -> (  amount and timestamp )
     mapping(address => tokenDetails[]) public tokenXAmount;
 
-    constructor() {
+    constructor(address _owner1, address _tokenX) public {
         owner = msg.sender;
+        owner1 = _owner1;
+        tokenX = _tokenX;
     }
 
     modifier onlyOwner() {
@@ -37,59 +39,55 @@ contract testReward {
         blocklist[_toBlock] = true;
     }
 
-    // function to be called to claim the tokenX
-    function claim(uint ID, address _tokenX) public {
-        if (tokenXAmount[msg.sender][ID].amount > 0 &&
-            block.timestamp >= tokenXAmount[msg.sender][ID].timestamp + 45 days) {
-            uint amount = tokenXAmount[msg.sender][ID].amount;
-            tokenXAmount[msg.sender][ID].amount = 0;
-            bool sent = IERC20(_tokenX).transferFrom(address(this), msg.sender, amount);
-            require(sent, "Token transfer failed");
-        }
+    // function to be called to claim the tokenX 
+    function claim(uint ID) public {
+        require(tokenXAmount[msg.sender][ID].amount > 0, "Positive amount expected");
+        require(block.timestamp >= tokenXAmount[msg.sender][ID].timestamp + 45 days, "can't claim yet" );
+        uint amount = tokenXAmount[msg.sender][ID].amount;
+        tokenXAmount[msg.sender][ID].amount = 0;
+        bool sent = IERC20(tokenX).transfer(msg.sender, amount);
+        require(sent, "Token transfer failed");
     }
 
-    // get all your unclaimed IDs
-    function getID() public view returns(uint[] memory Ids) {
-        uint len = tokenXAmount[msg.sender].length;
-        tokenDetails[] memory AllIds = tokenXAmount[msg.sender];
-        uint num;
-        for(uint i; i < len; i++ ) {
-            if (AllIds[i].amount > 0) {
-                Ids[num] = i;
-                num++;
-            }    
-        }
+    // get your length of the IDs to be claimed
+    function getIDLength() public view returns(uint length) {
+        return tokenXAmount[msg.sender].length;
     }
 
-// check if token address we can give from frontend and also owner address 
-    function reward(uint _amountIn, address _to, address tokenX, address owner1) public {
-        require(_amountIn > 0, "amount shoudl be more than zero");
+    // Function to give reward of tokenX
+    function reward(uint _amountIn, address _to) public {
+        require(_amountIn > 0, "amount should be more than zero");
         require(_to != address(0), "address invalid");
         uint amount = _amountIn / 200;
         if (IERC20(tokenX).balanceOf(owner1) < amount) {
-            revert NotEnoughBalance(amount);
+            revert ("Not enough tokens");
         }
-        _transferX(_to, amount, tokenX, owner1);
+        _transferX(_to, amount);
     }
 
-    function _transferX(address _to, uint _amount1, address tokenX, address owner1) private {
+    function _transferX(address _to, uint _amount1) private {
         require(
             IERC20(tokenX).allowance(owner1, address(this)) >= _amount1,
             "Token 1 allowance too low"
         );
-        _safeTransferFrom(IERC20(tokenX), owner1, _to, _amount1);
+        _safeTransferFrom(_to, _amount1);
     }
 
     function _safeTransferFrom(
-        IERC20 token,
-        address sender,
         address recipient,
         uint amount
     ) private {
-        bool sent = token.transferFrom(sender, address(this), amount);
+        bool sent = IERC20(tokenX).transferFrom(owner1, address(this), amount);
         require(sent, "Token transfer failed");
         if (sent) {
-            tokenXAmount[recipient].push(tokenDetails(block.timestamp, amount));
+            tokenXAmount[recipient].push(tokenDetails(amount, block.timestamp));
+            emit transferInitialized(recipient, block.timestamp, amount);
         }
+    }
+
+    // owner has the authority to change the token and reward owner address
+    function changeTokenDetails(address _owner, address _tokenX) public onlyOwner {
+        owner1 = _owner;
+        tokenX = _tokenX;
     }
 }
